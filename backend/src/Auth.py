@@ -1,7 +1,7 @@
 import hashlib
 import re
 from src.DataStore import data_store
-from src.Error import AccessError, InputError
+from src.Error import InputError
 
 class Account:
     def __init__(self, email, password, u_id):
@@ -30,9 +30,16 @@ def auth_login(email, password):
         Returns a dictionary containing the registered user's 
         'u_id' on successful match of user email and password
     '''
-    return {
-        'u_id': 0
-    }
+    store = data_store.get()
+    users = store['users']
+    for account in users:
+        if account.email == email:
+            if generate_hash(password) == account.password:
+                return {
+                    'u_id': account.id          
+                } 
+        raise InputError(description="Incorrect password")
+    raise InputError(description="Entered email does not belong to a user")
 
 def auth_register(email, password):
     '''
@@ -51,10 +58,29 @@ def auth_register(email, password):
     Return Value:
         Returns a dictionary containing the registered user's 'u_id' on successful register of user
     '''
-
+    store = data_store.get()
+    users = store['users']
+    
+    if not auth_register_valid_email(email):
+        raise InputError(description="Email entered is not a valid email")
+    
+    for account in users:
+        if account.email == email:
+            raise InputError(description="Email address is already taken")
+    
+    if len(password) < 6:
+        raise InputError(description="Password must be greater than 6 characters")
+    
+    u_id = len(users) + 1
+    account = Account(email, password, u_id)
+    
+    users.append(account)
+    data_store.set(store)
+    
     return {
-        'u_id': 0          
+        'u_id': account.id          
     } 
+
 
 def auth_register_valid_email(email):
     '''
